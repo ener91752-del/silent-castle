@@ -1,0 +1,584 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>سيلنت كاستل: النجاة أونلاين</title>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
+    <style>
+        * {
+            box-sizing: border-box;
+            user-select: none;
+            -webkit-user-select: none;
+        }
+        body {
+            margin: 0;
+            padding: 0;
+            background-color: #0c0f1d;
+            color: #fff;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            overflow: hidden;
+            touch-action: none;
+        }
+        #game-container {
+            position: relative;
+            width: 100vw;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+        }
+        canvas {
+            background: #111424;
+            display: block;
+            box-shadow: 0 0 20px rgba(0,0,0,0.8);
+        }
+        .screen {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(12, 15, 29, 0.96);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            z-index: 10;
+            padding: 20px;
+            text-align: center;
+        }
+        .hidden {
+            display: none !important;
+        }
+        h1 {
+            font-size: 2.2rem;
+            color: #e53e3e;
+            margin-bottom: 10px;
+            text-shadow: 0 2px 10px rgba(229, 62, 62, 0.5);
+        }
+        p {
+            color: #a0aec0;
+            font-size: 1rem;
+            margin-bottom: 20px;
+        }
+        input {
+            padding: 12px 20px;
+            margin: 8px 0;
+            width: 280px;
+            max-width: 90%;
+            background: #1a202c;
+            border: 2px solid #4a5568;
+            border-radius: 8px;
+            color: #fff;
+            font-size: 1rem;
+            outline: none;
+            text-align: center;
+        }
+        .emoji-select {
+            display: flex;
+            gap: 12px;
+            justify-content: center;
+            font-size: 2rem;
+            margin: 10px 0;
+            cursor: pointer;
+        }
+        .emoji-option {
+            padding: 8px;
+            border: 2px solid transparent;
+            border-radius: 12px;
+            background: #1a202c;
+            transition: 0.2s;
+        }
+        .emoji-option.selected {
+            border-color: #e53e3e;
+            background: #2d3748;
+        }
+        button {
+            padding: 12px 30px;
+            margin: 10px;
+            background: linear-gradient(135deg, #e53e3e, #c53030);
+            border: none;
+            border-radius: 8px;
+            color: white;
+            font-size: 1.1rem;
+            font-weight: bold;
+            cursor: pointer;
+            box-shadow: 0 4px 15px rgba(229, 62, 62, 0.4);
+        }
+        button:active {
+            transform: scale(0.95);
+        }
+        #hud {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            right: 10px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            z-index: 5;
+            pointer-events: none;
+        }
+        .hud-card {
+            background: rgba(26, 32, 44, 0.85);
+            border: 1px solid #4a5568;
+            padding: 8px 15px;
+            border-radius: 10px;
+            display: flex;
+            gap: 15px;
+            font-size: 0.95rem;
+            font-weight: bold;
+            pointer-events: auto;
+            backdrop-filter: blur(5px);
+        }
+        .hud-item {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+        #touch-controls {
+            position: absolute;
+            bottom: 20px;
+            left: 20px;
+            right: 20px;
+            display: flex;
+            justify-content: space-between;
+            z-index: 5;
+            pointer-events: none;
+        }
+        .dpad {
+            display: grid;
+            grid-template-columns: repeat(3, 50px);
+            grid-template-rows: repeat(3, 50px);
+            gap: 5px;
+            pointer-events: auto;
+        }
+        .dpad-btn {
+            background: rgba(74, 85, 104, 0.6);
+            border: 1px solid rgba(255,255,255,0.2);
+            border-radius: 10px;
+            color: white;
+            font-size: 1.2rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .dpad-btn:active {
+            background: rgba(229, 62, 62, 0.8);
+        }
+        .action-buttons {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            pointer-events: auto;
+            justify-content: flex-end;
+        }
+        .action-btn {
+            background: rgba(56, 161, 105, 0.8);
+            border: 1px solid rgba(255,255,255,0.2);
+            padding: 15px 25px;
+            border-radius: 12px;
+            color: white;
+            font-weight: bold;
+            font-size: 1rem;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+        }
+        #room-menu {
+            position: absolute;
+            bottom: 120px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(26, 32, 44, 0.95);
+            border: 2px solid #4a5568;
+            padding: 15px;
+            border-radius: 12px;
+            display: none;
+            flex-direction: column;
+            gap: 10px;
+            z-index: 6;
+            min-width: 250px;
+            text-align: center;
+        }
+        #room-menu button {
+            margin: 5px 0;
+            padding: 10px;
+            font-size: 0.95rem;
+        }
+    </style>
+</head>
+<body>
+
+<div id="game-container">
+    <div id="menu-screen" class="screen">
+        <h1>سيلنت كاستل: النجاة أونلاين</h1>
+        <p>اختر شخصيتك، حدد رمز السيرفر للعب مع الأصدقاء، ودافعوا عن الـ 4 غرف!</p>
+        <input type="text" id="player-name" placeholder="أدخل اسمك..." value="البطل">
+        <input type="text" id="room-code" placeholder="رمز السيرفر (مثال: castle1)" value="castle1">
+        
+        <div class="emoji-select">
+            <div class="emoji-option selected" onclick="selectEmoji('🙂', this)">🙂</div>
+            <div class="emoji-option" onclick="selectEmoji('😎', this)">😎</div>
+            <div class="emoji-option" onclick="selectEmoji('🤠', this)">🤠</div>
+            <div class="emoji-option" onclick="selectEmoji('😷', this)">😷</div>
+        </div>
+
+        <button onclick="startOnlineGame()">دخول السيرفر واللعب</button>
+    </div>
+
+    <div id="hud" class="hidden">
+        <div class="hud-card">
+            <div class="hud-item">💰 <span id="gold-val">60</span></div>
+            <div class="hud-item">🛡️ باب: <span id="door-lvl">1</span> (<span id="door-hp">100</span>)</div>
+        </div>
+        <div class="hud-card" style="background: rgba(229, 62, 62, 0.2); border-color: #e53e3e;">
+            <div class="hud-item">💀 حاصد الأرواح HP: <span id="reaper-hp-val">200</span></div>
+        </div>
+    </div>
+
+    <canvas id="gameCanvas"></canvas>
+
+    <div id="room-menu">
+        <h3 id="room-title" style="margin:0 0 10px 0; color:#e2e8f0;">غرفة رقم #</h3>
+        <button onclick="actionSleep()">🛌 النوم (جمع الذهب)</button>
+        <button onclick="actionUpgradeDoor()">⬆️ تطوير الباب (40 ذهب)</button>
+        <button onclick="actionRepairDoor()">🔧 إصلاح الباب (20 ذهب)</button>
+        <button onclick="actionBuildTurret()">🔫 بناء برج دفاعي (50 ذهب)</button>
+        <button style="background:#4a5568;" onclick="closeRoomMenu()">إغلاق</button>
+    </div>
+
+    <div id="touch-controls" class="hidden">
+        <div class="dpad">
+            <div></div>
+            <div class="dpad-btn" ontouchstart="setDir(0,-1)" ontouchend="setDir(0,0)">⬆️</div>
+            <div></div>
+            <div class="dpad-btn" ontouchstart="setDir(-1,0)" ontouchend="setDir(0,0)">⬅️</div>
+            <div class="dpad-btn">⏺️</div>
+            <div class="dpad-btn" ontouchstart="setDir(1,0)" ontouchend="setDir(0,0)">➡️</div>
+            <div></div>
+            <div class="dpad-btn" ontouchstart="setDir(0,1)" ontouchend="setDir(0,0)">⬇️</div>
+            <div></div>
+        </div>
+        <div class="action-buttons">
+            <button class="action-btn" onclick="openCurrentRoomMenu()">🚪 تفاعل مع الغرفة</button>
+        </div>
+    </div>
+
+    <div id="game-over-screen" class="screen hidden">
+        <h1 id="end-title" style="color: #e53e3e;">انتهت اللعبة!</h1>
+        <p id="end-desc">تم تحطيم الباب والقضاء عليك.</p>
+        <button onclick="location.reload()">العب مرة أخرى</button>
+    </div>
+</div>
+
+<script>
+    const firebaseConfig = {
+        databaseURL: "https://silent-castle-default-rtdb.firebaseio.com/"
+    };
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.database();
+
+    const canvas = document.getElementById('gameCanvas');
+    const ctx = canvas.getContext('2d');
+
+    function resizeCanvas() {
+        canvas.width = window.innerWidth;
+        canvas.height = window.innerHeight;
+    }
+    window.addEventListener('resize', resizeCanvas);
+    resizeCanvas();
+
+    let gameActive = false;
+    let playerId = 'p_' + Math.random().toString(36).substr(2, 6);
+    let playerName = "البطل";
+    let roomCode = "castle1";
+    let selectedEmoji = "🙂";
+
+    function selectEmoji(emoji, el) {
+        selectedEmoji = emoji;
+        document.querySelectorAll('.emoji-option').forEach(e => e.classList.remove('selected'));
+        el.classList.add('selected');
+    }
+
+    let player = {
+        x: 400,
+        y: 400,
+        speed: 3.5,
+        dx: 0,
+        dy: 0,
+        gold: 60,
+        inBed: false,
+        currentRoom: null
+    };
+
+    let rooms = [
+        { id: 1, x: 140, y: 120, width: 140, height: 110, owner: null, doorHp: 100, doorMaxHp: 100, doorLevel: 1, bedX: 170, bedY: 150, turrets: [] },
+        { id: 2, x: 540, y: 120, width: 140, height: 110, owner: null, doorHp: 100, doorMaxHp: 100, doorLevel: 1, bedX: 570, bedY: 150, turrets: [] },
+        { id: 3, x: 140, y: 520, width: 140, height: 110, owner: null, doorHp: 100, doorMaxHp: 100, doorLevel: 1, bedX: 170, bedY: 550, turrets: [] },
+        { id: 4, x: 540, y: 520, width: 140, height: 110, owner: null, doorHp: 100, doorMaxHp: 100, doorLevel: 1, bedX: 570, bedY: 550, turrets: [] }
+    ];
+
+    let onlinePlayers = {};
+    let bullets = [];
+
+    let reaper = {
+        x: 400,
+        y: 350,
+        speed: 1.2,
+        hp: 200,
+        maxHp: 200,
+        targetRoom: null,
+        radius: 22
+    };
+
+    function startOnlineGame() {
+        playerName = document.getElementById('player-name').value || "البطل";
+        roomCode = document.getElementById('room-code').value || "castle1";
+
+        document.getElementById('menu-screen').classList.add('hidden');
+        document.getElementById('hud').classList.remove('hidden');
+        document.getElementById('touch-controls').classList.remove('hidden');
+
+        gameActive = true;
+
+        const myRef = db.ref(`servers/${roomCode}/players/${playerId}`);
+        myRef.onDisconnect().remove();
+
+        setInterval(() => {
+            if (!gameActive) return;
+            myRef.set({
+                name: playerName,
+                emoji: selectedEmoji,
+                x: player.x,
+                y: player.y,
+                inBed: player.inBed
+            });
+        }, 50);
+
+        db.ref(`servers/${roomCode}/players`).on('value', snapshot => {
+            onlinePlayers = snapshot.val() || {};
+        });
+
+        db.ref(`servers/${roomCode}/rooms`).on('value', snapshot => {
+            let data = snapshot.val();
+            if (data) {
+                rooms.forEach((r, idx) => {
+                    if (data[idx]) {
+                        r.owner = data[idx].owner;
+                        r.doorHp = data[idx].doorHp;
+                        r.doorLevel = data[idx].doorLevel;
+                        r.turrets = data[idx].turrets || [];
+                    }
+                });
+            }
+        });
+
+        db.ref(`servers/${roomCode}/reaperHp`).on('value', snapshot => {
+            let val = snapshot.val();
+            if (val !== null) reaper.hp = val;
+        });
+
+        requestAnimationFrame(gameLoop);
+    }
+
+    let keys = {};
+    window.addEventListener('keydown', e => keys[e.key] = true);
+    window.addEventListener('keyup', e => keys[e.key] = false);
+
+    function setDir(x, y) {
+        player.dx = x * player.speed;
+        player.dy = y * player.speed;
+    }
+
+    function gameLoop() {
+        if (!gameActive) return;
+        update();
+        render();
+        requestAnimationFrame(gameLoop);
+    }
+
+    function update() {
+        if (!player.inBed) {
+            let moveX = player.dx;
+            let moveY = player.dy;
+
+            if (keys['ArrowUp'] || keys['w']) moveY = -player.speed;
+            if (keys['ArrowDown'] || keys['s']) moveY = player.speed;
+            if (keys['ArrowLeft'] || keys['a']) moveX = -player.speed;
+            if (keys['ArrowRight'] || keys['d']) moveX = player.speed;
+
+            player.x += moveX;
+            player.y += moveY;
+
+            player.x = Math.max(50, Math.min(canvas.width - 50, player.x));
+            player.y = Math.max(50, Math.min(canvas.height - 50, player.y));
+        } else {
+            if (Math.random() < 0.03) {
+                player.gold += player.currentRoom.doorLevel * 2;
+            }
+
+            if (player.currentRoom && player.currentRoom.turrets.length > 0) {
+                if (Math.random() < 0.08) {
+                    let damage = player.currentRoom.turrets.length * 4;
+                    reaper.hp -= damage;
+                    
+                    bullets.push({
+                        x: player.currentRoom.x + player.currentRoom.width / 2,
+                        y: player.currentRoom.y + player.currentRoom.height / 2,
+                        tx: reaper.x,
+                        ty: reaper.y,
+                        progress: 0
+                    });
+
+                    db.ref(`servers/${roomCode}/reaperHp`).set(reaper.hp);
+
+                    if (reaper.hp <= 0) {
+                        gameOver(true);
+                    }
+                }
+            }
+        }
+
+        bullets.forEach((b, index) => {
+            b.progress += 0.1;
+            if (b.progress >= 1) {
+                bullets.splice(index, 1);
+            }
+        });
+
+        document.getElementById('gold-val').innerText = player.gold;
+        document.getElementById('reaper-hp-val').innerText = Math.max(0, reaper.hp);
+        if (player.currentRoom) {
+            document.getElementById('door-lvl').innerText = player.currentRoom.doorLevel;
+            document.getElementById('door-hp').innerText = Math.floor(player.currentRoom.doorHp);
+        }
+
+        let activeRooms = rooms.filter(r => r.owner !== null);
+        if (activeRooms.length > 0) {
+            if (!reaper.targetRoom || reaper.targetRoom.owner === null) {
+                reaper.targetRoom = activeRooms[Math.floor(Math.random() * activeRooms.length)];
+            }
+
+            let tx = reaper.targetRoom.x + reaper.targetRoom.width / 2;
+            let ty = reaper.targetRoom.y + reaper.targetRoom.height + 10;
+            
+            let angle = Math.atan2(ty - reaper.y, tx - reaper.x);
+            reaper.x += Math.cos(angle) * reaper.speed;
+            reaper.y += Math.sin(angle) * reaper.speed;
+
+            let dist = Math.hypot(tx - reaper.x, ty - reaper.y);
+            if (dist < 15) {
+                reaper.targetRoom.doorHp -= 0.15;
+                if (reaper.targetRoom.doorHp <= 0) {
+                    if (reaper.targetRoom === player.currentRoom) {
+                        gameOver(false);
+                    }
+                    reaper.targetRoom.owner = null;
+                    reaper.targetRoom = null;
+                }
+                db.ref(`servers/${roomCode}/rooms`).set(rooms);
+            }
+        }
+    }
+
+    function render() {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+        ctx.fillStyle = '#16192b';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        
+        ctx.strokeStyle = '#222742';
+        ctx.lineWidth = 1;
+        for (let x = 0; x < canvas.width; x += 40) {
+            ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, canvas.height); ctx.stroke();
+        }
+        for (let y = 0; y < canvas.height; y += 40) {
+            ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(canvas.width, y); ctx.stroke();
+        }
+
+        ctx.fillStyle = '#4a1515';
+        ctx.fillRect(canvas.width / 2 - 90, 0, 180, canvas.height);
+
+        rooms.forEach(room => {
+            ctx.fillStyle = '#222b3e';
+            ctx.fillRect(room.x, room.y, room.width, room.height);
+            ctx.strokeStyle = '#4a5568';
+            ctx.lineWidth = 3;
+            ctx.strokeRect(room.x, room.y, room.width, room.height);
+
+            ctx.fillStyle = room.owner === playerId ? '#3182ce' : '#718096';
+            ctx.fillRect(room.bedX, room.bedY, 30, 45);
+            ctx.fillStyle = '#fff';
+            ctx.fillRect(room.bedX + 5, room.bedY + 5, 20, 10);
+
+            room.turrets.forEach((t, i) => {
+                ctx.fillStyle = '#38a169';
+                ctx.fillRect(room.x + 15 + (i * 25), room.y + 15, 20, 20);
+                ctx.fillStyle = '#68d391';
+                ctx.fillRect(room.x + 20 + (i * 25), room.y + 20, 10, 10);
+            });
+
+            ctx.fillStyle = room.doorHp > 30 ? '#d69e2e' : '#e53e3e';
+            ctx.fillRect(room.x + room.width / 2 - 25, room.y + room.height - 8, 50, 10);
+        });
+
+        for (let id in onlinePlayers) {
+            let p = onlinePlayers[id];
+            ctx.font = '24px sans-serif';
+            ctx.textAlign = 'center';
+            ctx.fillText(p.emoji || '🙂', p.x, p.y + 8);
+            ctx.fillStyle = '#fff';
+            ctx.font = '12px sans-serif';
+            ctx.fillText(p.name, p.x, p.y - 18);
+        }
+
+        bullets.forEach(b => {
+            let currX = b.x + (b.tx - b.x) * b.progress;
+            let currY = b.y + (b.ty - b.y) * b.progress;
+            ctx.fillStyle = '#f6e05e';
+            ctx.beginPath();
+            ctx.arc(currX, currY, 5, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.strokeStyle = '#ecc94b';
+            ctx.lineWidth = 2;
+            ctx.stroke();
+        });
+
+        ctx.fillStyle = '#e53e3e';
+        ctx.beginPath();
+        ctx.arc(reaper.x, reaper.y, reaper.radius, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.strokeStyle = '#fff';
+        ctx.lineWidth = 2;
+        ctx.stroke();
+
+        ctx.fillStyle = '#000';
+        ctx.fillRect(reaper.x - 25, reaper.y - 35, 50, 6);
+        ctx.fillStyle = '#e53e3e';
+        ctx.fillRect(reaper.x - 25, reaper.y - 35, Math.max(0, (reaper.hp / reaper.maxHp) * 50), 6);
+    }
+
+    function openCurrentRoomMenu() {
+        let foundRoom = rooms.find(r => 
+            player.x >= r.x && player.x <= r.x + r.width &&
+            player.y >= r.y && player.y <= r.y + r.height
+        );
+
+        if (foundRoom) {
+            player.currentRoom = foundRoom;
+            document.getElementById('room-title').innerText = `غرفة رقم #${foundRoom.id}`;
+            document.getElementById('room-menu').style.display = 'flex';
+        } else {
+            alert("يجب أن تكون داخل غرفة لتتفاعل معها!");
+        }
+    }
+
+    function closeRoomMenu() {
+        document.getElementById('room-menu').style.display = 'none';
+    }
+
+    function actionSleep() {
+        if (!player.currentRoom) return;
+        if (player.currentRoom.
